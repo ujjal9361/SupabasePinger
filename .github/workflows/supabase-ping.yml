@@ -16,34 +16,36 @@ jobs:
           URL_2: ${{ secrets.SUPABASE_URL_2 }}
           KEY_2: ${{ secrets.SUPABASE_KEY_2 }}
         run: |
-          projects=("$URL_1:$KEY_1" "$URL_2:$KEY_2")
           failed=0
+
+          # Project 1
+          echo "Pinging Project 1: $URL_1"
+          response_1=$(curl -s -o /dev/null -w "%{http_code}" \
+            -X GET "${URL_1}/rest/v1/ping_log?select=id&limit=1" \
+            -H "apikey: ${KEY_1}" \
+            -H "Authorization: Bearer ${KEY_1}")
           
-          for pair in "${projects[@]}"; do
-            IFS=':' read -r url key <<< "$pair"
-            
-            # Check if URL is empty
-            if [ -z "$url" ] || [ "$url" = "https://" ]; then
-              echo "Error: Supabase URL is empty or not configured properly in GitHub Secrets!"
-              failed=1
-              continue
-            fi
-            
-            echo "Pinging: $url"
-            response=$(curl -s -o /dev/null -w "%{http_code}" \
-              -X GET "${url}/rest/v1/ping_log?select=id&limit=1" \
-              -H "apikey: ${key}" \
-              -H "Authorization: Bearer ${key}")
-            
-            echo "HTTP Status: $response"
-            
-            if [ "$response" -ne 200 ]; then
-              echo "Failed to ping $url"
-              failed=1
-            fi
-            echo "-----------------------------------"
-          done
+          echo "HTTP Status: $response_1"
+          if [ "$response_1" -ne 200 ]; then
+            echo "Failed to ping Project 1"
+            failed=1
+          fi
+
+          echo "-----------------------------------"
+
+          # Project 2
+          echo "Pinging Project 2: $URL_2"
+          response_2=$(curl -s -o /dev/null -w "%{http_code}" \
+            -X GET "${URL_2}/rest/v1/ping_log?select=id&limit=1" \
+            -H "apikey: ${KEY_2}" \
+            -H "Authorization: Bearer ${KEY_2}")
           
+          echo "HTTP Status: $response_2"
+          if [ "$response_2" -ne 200 ]; then
+            echo "Failed to ping Project 2"
+            failed=1
+          fi
+
           if [ "$failed" -ne 0 ]; then
             echo "One or more pings failed."
             exit 1
