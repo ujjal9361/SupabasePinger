@@ -2,8 +2,8 @@ name: Dual Supabase Activity Ping
 
 on:
   schedule:
-    - cron: '0 0 */3 * *' # Runs every 3 days at midnight UTC
-  workflow_dispatch: # Allows manual testing from the Actions tab
+    - cron: '0 0 */3 * *'
+  workflow_dispatch:
 
 jobs:
   ping-projects:
@@ -21,6 +21,13 @@ jobs:
           
           for pair in "${projects[@]}"; do
             IFS=':' read -r url key <<< "$pair"
+            
+            # Check if URL is empty
+            if [ -z "$url" ] || [ "$url" = "https://" ]; then
+              echo "Error: Supabase URL is empty or not configured properly in GitHub Secrets!"
+              failed=1
+              continue
+            fi
             
             echo "Pinging: $url"
             response=$(curl -s -o /dev/null -w "%{http_code}" \
