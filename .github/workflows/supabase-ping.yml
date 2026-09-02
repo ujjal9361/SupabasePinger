@@ -1,0 +1,45 @@
+name: Dual Supabase Activity Ping
+
+on:
+  schedule:
+    - cron: '0 0 */3 * *' # Runs every 3 days at midnight UTC
+  workflow_dispatch: # Allows manual testing from the Actions tab
+
+jobs:
+  ping-projects:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping Both Supabase Projects
+        env:
+          URL_1: ${{ secrets.SUPABASE_URL_1 }}
+          KEY_1: ${{ secrets.SUPABASE_KEY_1 }}
+          URL_2: ${{ secrets.SUPABASE_URL_2 }}
+          KEY_2: ${{ secrets.SUPABASE_KEY_2 }}
+        run: |
+          projects=("$URL_1:$KEY_1" "$URL_2:$KEY_2")
+          failed=0
+          
+          for pair in "${projects[@]}"; do
+            IFS=':' read -r url key <<< "$pair"
+            
+            echo "Pinging: $url"
+            response=$(curl -s -o /dev/null -w "%{http_code}" \
+              -X GET "${url}/rest/v1/ping_log?select=id&limit=1" \
+              -H "apikey: ${key}" \
+              -H "Authorization: Bearer ${key}")
+            
+            echo "HTTP Status: $response"
+            
+            if [ "$response" -ne 200 ]; then
+              echo "Failed to ping $url"
+              failed=1
+            fi
+            echo "-----------------------------------"
+          done
+          
+          if [ "$failed" -ne 0 ]; then
+            echo "One or more pings failed."
+            exit 1
+          else
+            echo "Both Supabase projects successfully pinged!"
+          fi
